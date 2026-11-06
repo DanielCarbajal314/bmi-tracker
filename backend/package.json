@@ -1,0 +1,43 @@
+{
+  "name": "bmi-backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "bun src/main.ts",
+    "start:dev": "bun --watch src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "bun --bun eslint \"{src,test}/**/*.ts\" --max-warnings 0",
+    "test": "bun run test:unit && bun run test:int",
+    "test:unit": "bun test $(find ./src -name '*.unit-spec.ts')",
+    "test:int": "DB_NAME=bmi_test bun test --preload ./test/support/setup.ts $(find ./test -name '*.int-spec.ts')",
+    "typeorm": "bun --bun ./node_modules/typeorm/cli.js",
+    "migration:run": "bun run typeorm migration:run -d src/config/database/data-source.ts",
+    "migration:revert": "bun run typeorm migration:revert -d src/config/database/data-source.ts",
+    "migration:show": "bun run typeorm migration:show -d src/config/database/data-source.ts",
+    "migration:generate": "bun run typeorm migration:generate -d src/config/database/data-source.ts",
+    "migration:create": "bun run typeorm migration:create"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.3.3",
+    "@nestjs/config": "^12.1.0",
+    "@nestjs/core": "^12.3.3",
+    "@nestjs/cqrs": "^12.1.2",
+    "@nestjs/platform-express": "^12.3.3",
+    "@nestjs/swagger": "^12.1.0",
+    "@nestjs/typeorm": "^12.0.2",
+    "nestjs-zod": "^5.5.0",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^1.1.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/bun": "^1.4.4",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "eslint": "^10.14.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.72.1"
+  }
+}

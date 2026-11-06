@@ -1,0 +1,54 @@
+# --- Secrets and local configuration -------------------------------------------------
+# `.env` is created from `.env.example` by `make env`. terraform.tfvars holds the real
+# alert e-mail and repository; its example (terraform.tfvars.example) is tracked.
+.env
+.env.*
+!.env.example
+*.tfvars
+*.pem
+*.key
+.claude/settings.local.json
+
+# --- Dependencies (backend and frontend) ---------------------------------------------
+node_modules/
+
+# --- Build output and caches ---------------------------------------------------------
+dist/
+build/
+coverage/
+.vite/
+.cache/
+.eslintcache
+*.tsbuildinfo
+
+# --- Logs ----------------------------------------------------------------------------
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# --- Terraform (infrastructure/) -----------------------------------------------------
+# The state of prod and of bootstrap lives in S3 (bootstrap moves there by itself at the end
+# of `make bootstrap-apply`). The lock files (.terraform.lock.hcl) stay tracked.
+.terraform/
+.terraform-validate/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# --- Docker --------------------------------------------------------------------------
+docker-compose.override.yml
+
+# --- Operating system and editors ----------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~

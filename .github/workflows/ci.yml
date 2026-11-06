@@ -1,0 +1,60 @@
+# GitHub only runs workflows from this folder. Every check is a make target, so the same checks
+# run locally with the same command. The deploy steps are all in deploy.yml.
+#
+# Three checks run side by side. The deploy job needs all three and only runs for a push to
+# main, never for a pull request: a red check never reaches production. Terraform is not part
+# of the deploy: infrastructure is applied by hand (see infrastructure/README.md).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push cancels the checks of an older pull request, but never a run on main:
+# stopping a deploy half way through its migrations is worse than letting it finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: make env
+      - run: make backend-typecheck
+      - run: make backend-lint
+      - run: make backend-test
+      - run: make backend-image
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: make env
+      - run: make format-check
+      - run: make frontend-typecheck
+      - run: make frontend-test
+      - run: make frontend-build
+
+  infra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: make env
+      - run: make infra-validate
+
+  deploy:
+    needs: [backend, frontend, infra]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write # OIDC: the deploy role is assumed without stored credentials
+      contents: read
+    uses: ./.github/workflows/deploy.yml

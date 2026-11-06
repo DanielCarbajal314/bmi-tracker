@@ -1,0 +1,190 @@
+# Ships the app: backend image, migrations, backend service, frontend. All of it is in this file.
+# ci.yml calls it after its checks pass; running it by hand redeploys the current commit without
+# a new push (for example to retry after an AWS hiccup) and skips the checks, so use it
+# deliberately. Terraform is not part of it: infrastructure is applied by hand.
+#
+# Set these in the repository settings (Settings > Secrets and variables > Actions > Variables).
+# `make gh-vars` prints them from the Terraform outputs:
+#   AWS_REGION                 for example us-east-1
+#   AWS_ROLE_ARN               role the job assumes through OIDC
+#   FRONTEND_BUCKET            S3 bucket of the frontend
+#   FRONTEND_DISTRIBUTION_ID   CloudFront distribution of the frontend
+#   VITE_API_BASE_URL          https URL of the API, baked into the frontend bundle
+# Optional: PROJECT, when the resources are not named bmi-tracker.
+name: Deploy
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    # Only main may deploy. The deploy role trusts nothing else either, but fail early and clearly.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Two deploys at once would race on the migrations: the second waits for the first.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
+      FRONTEND_DISTRIBUTION_ID: ${{ vars.FRONTEND_DISTRIBUTION_ID }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      # Names Terraform gives the resources: <project>, <project>-backend, <project>-migrations.
+      ECR_BACKEND_REPO: ${{ vars.PROJECT || 'bmi-tracker' }}/backend
+      ECS_CLUSTER: ${{ vars.PROJECT || 'bmi-tracker' }}
+      ECS_SERVICE: ${{ vars.PROJECT || 'bmi-tracker' }}-backend
+      ECS_MIGRATIONS_FAMILY: ${{ vars.PROJECT || 'bmi-tracker' }}-migrations
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the repository variables
+        run: |
+          for name in AWS_ROLE_ARN FRONTEND_BUCKET FRONTEND_DISTRIBUTION_ID VITE_API_BASE_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The repository variable $name is not set (make gh-vars prints them)"
+              exit 1
+            fi
+          done
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # --- Backend: image, task definitions, migrations, service ---
+
+      - name: Build and push the backend image
+        run: |
+          IMAGE="${{ steps.ecr-login.outputs.registry }}/$ECR_BACKEND_REPO:$IMAGE_TAG"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+          # Tags are immutable, so redeploying a commit reuses the image already in ECR.
+          if aws ecr describe-images --repository-name "$ECR_BACKEND_REPO" \
+            --image-ids "imageTag=$IMAGE_TAG" >/dev/null 2>&1; then
+            echo "$IMAGE is already in ECR, nothing to push"
+          else
+            docker build --platform linux/amd64 --target prod --tag "$IMAGE" backend/
+            docker push "$IMAGE"
+          fi
+
+      # Copies the current task definition with the image of one container swapped, and
+      # registers it. Terraform created the definitions; from here on CI owns the image.
+      - name: Register the task definitions with the new image
+        id: task-definitions
+        run: |
+          register() {
+            definition=$(
+              aws ecs describe-task-definition --task-definition "$1" \
+                --query taskDefinition --output json |
+                jq --arg container "$2" --arg image "$IMAGE" '
+                  .containerDefinitions |= map(if .name == $container then .image = $image else . end)
+                  | {family, taskRoleArn, executionRoleArn, networkMode, containerDefinitions, volumes,
+                     placementConstraints, requiresCompatibilities, cpu, memory, runtimePlatform,
+                     ephemeralStorage, pidMode, ipcMode}
+                  | with_entries(select(.value != null))'
+            )
+            aws ecs register-task-definition --cli-input-json "$definition" \
+              --query taskDefinition.taskDefinitionArn --output text
+          }
+          echo "migrations=$(register "$ECS_MIGRATIONS_FAMILY" migrations)" >> "$GITHUB_OUTPUT"
+          echo "backend=$(register "$ECS_SERVICE" backend)" >> "$GITHUB_OUTPUT"
+
+      # The migrations run where the service runs (same subnets, security group and public IP
+      # setting). A failure stops the deploy here, before the service is touched.
+      # A task that never started (no exit code: the image pull timed out, for example) is
+      # tried again, up to 3 times. Migrations that already ran are skipped, so a retry is safe.
+      - name: Run the migrations
+        env:
+          TASK_DEFINITION: ${{ steps.task-definitions.outputs.migrations }}
+        run: |
+          network=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration' --output json)
+          subnets=$(echo "$network" | jq -r '.subnets | join(",")')
+          groups=$(echo "$network" | jq -r '.securityGroups | join(",")')
+          public_ip=$(echo "$network" | jq -r '.assignPublicIp')
+
+          for attempt in 1 2 3; do
+            task_arn=$(aws ecs run-task --cluster "$ECS_CLUSTER" --task-definition "$TASK_DEFINITION" \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[$subnets],securityGroups=[$groups],assignPublicIp=$public_ip}" \
+              --query 'tasks[0].taskArn' --output text)
+            if [ -z "$task_arn" ] || [ "$task_arn" = "None" ]; then
+              echo "::error::ECS did not start the migrations task"
+              exit 1
+            fi
+
+            aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$task_arn"
+            exit_code=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$task_arn" \
+              --query 'tasks[0].containers[0].exitCode' --output text)
+            if [ "$exit_code" = "0" ]; then
+              exit 0
+            fi
+
+            stopped_reason=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$task_arn" \
+              --query 'tasks[0].stoppedReason' --output text)
+            if [ "$exit_code" = "None" ] && [ "$attempt" -lt 3 ]; then
+              echo "::warning::The migrations task did not start (attempt $attempt of 3): $stopped_reason"
+              sleep 15
+              continue
+            fi
+            echo "::error::The migrations failed (exit code $exit_code): $stopped_reason. Log group: /ecs/$ECS_MIGRATIONS_FAMILY"
+            exit 1
+          done
+
+      - name: Deploy the backend service
+        env:
+          TASK_DEFINITION: ${{ steps.task-definitions.outputs.backend }}
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" \
+            --task-definition "$TASK_DEFINITION" >/dev/null
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE"
+
+          # A deployment the circuit breaker rolled back also ends up stable: check the new one won.
+          primary=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" \
+            --query "services[0].deployments[?status=='PRIMARY'].taskDefinition | [0]" --output text)
+          if [ "$primary" != "$TASK_DEFINITION" ]; then
+            echo "::error::ECS rolled the service back to $primary"
+            exit 1
+          fi
+
+      - name: Check the API
+        run: |
+          curl --fail --silent --show-error --retry 10 --retry-delay 6 --retry-all-errors \
+            "$VITE_API_BASE_URL/health"
+          echo
+
+      # --- Frontend: static build synced to S3, served through CloudFront ---
+
+      # The API address is baked into the bundle. The `dist` stage holds only the static files.
+      - name: Build the frontend
+        run: |
+          docker build --target dist --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
+            --output type=local,dest=frontend/dist frontend/
+
+      # Hashed bundles never change under the same name, so they are cached for good.
+      # Everything else, index.html first, must be fetched again to pick up a new release.
+      - name: Sync the frontend to S3
+        run: |
+          aws s3 sync frontend/dist "s3://$FRONTEND_BUCKET" --delete --exclude 'assets/*' \
+            --cache-control 'no-cache'
+          aws s3 sync frontend/dist/assets "s3://$FRONTEND_BUCKET/assets" --delete \
+            --cache-control 'public,max-age=31536000,immutable'
+
+      - name: Invalidate the CloudFront cache
+        run: |
+          aws cloudfront create-invalidation --distribution-id "$FRONTEND_DISTRIBUTION_ID" \
+            --paths '/*' >/dev/null

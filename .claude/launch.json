@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-lc", "cd /Users/daniels/Documents/interview-starter && make dev-back"],
+      "port": 3000
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-lc", "cd /Users/daniels/Documents/interview-starter && make dev-front"],
+      "port": 5173
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+name: bmi-tracker
+
+# Backend image is shared by the app and the migration container.
+# Only the backend service builds it, so two builds never race on one tag.
+x-backend: &backend
+  image: bmi-backend:dev
+  env_file: .env
+  volumes:
+    - ./backend/src:/app/src
+    - ./backend/test:/app/test
+
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_EXPOSED_PORT:-5432}:5432"
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Runs pending migrations and exits.
+  migrate:
+    <<: *backend
+    command: ["bun", "run", "migration:run"]
+    pull_policy: never
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    <<: *backend
+    build:
+      context: ./backend
+      target: dev
+    ports:
+      - "${BACKEND_EXPOSED_PORT:-3001}:${PORT:-3000}"
+    depends_on:
+      database:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      API_PROXY_TARGET: http://backend:${PORT:-3000}
+      USE_POLLING: "true"
+    ports:
+      - "${FRONTEND_EXPOSED_PORT:-5174}:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+
+  # Tools for the infrastructure and the pipeline. Started only with `docker compose run`.
+  terraform:
+    image: hashicorp/terraform:1.17.1
+    profiles: [tools]
+    entrypoint: ["terraform"]
+    working_dir: /infra
+    volumes:
+      - ./infrastructure:/infra
+      - ${HOME}/.aws:/root/.aws:ro
+    environment:
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
+      AWS_SESSION_TOKEN:
+      AWS_PROFILE:
+      TF_VAR_aws_region: ${AWS_REGION:-us-east-1}
+      TF_VAR_project: ${PROJECT:-bmi-tracker}
+      TF_VAR_image_tag: ${IMAGE_TAG:-local}
+      TF_VAR_github_repo: ${GITHUB_REPO:-}
+
+  aws:
+    image: amazon/aws-cli:2.39.5
+    profiles: [tools]
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
+    environment:
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
+      AWS_SESSION_TOKEN:
+      AWS_PROFILE:
+      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+
+volumes:
+  database-data:
