@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { DatabaseProbe } from './database.check';
+import { DatabaseCheck } from './database.check';
 
 @Injectable()
-export class DatabaseProbeAdapter extends DatabaseProbe {
+export class DatabaseCheckAdapter extends DatabaseCheck {
   constructor(@Inject(DataSource) private readonly dataSource: DataSource) {
     super();
   }
