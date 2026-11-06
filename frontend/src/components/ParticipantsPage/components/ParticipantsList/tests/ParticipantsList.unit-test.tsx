@@ -28,11 +28,12 @@ describe('ParticipantsList', () => {
     const rows = await screen.findAllByRole('row');
     expect(rows).toHaveLength(3);
     expect(within(rows[1]!).getByText('Ada')).toBeInTheDocument();
-    expect(within(rows[1]!).getByText('70 kg')).toBeInTheDocument();
-    expect(within(rows[1]!).getByText('1.75 m')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('154.3 lb')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('69 in')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('22.78')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('154.32')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('68.90')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('22.9')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('154.30')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('69.00')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('22.8')).toBeInTheDocument();
   });
 
   it('says so when there is nobody to show', async () => {
@@ -64,7 +65,7 @@ describe('ParticipantsList', () => {
 
     await user.type(screen.getByLabelText('Min BMI'), '20');
     await user.type(screen.getByLabelText('Max BMI'), '30');
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
 
     await screen.findByText('Ada');
     const [url] = fetchMock.mock.calls.at(-1) ?? [];
@@ -82,7 +83,7 @@ describe('ParticipantsList', () => {
     renderWithQueryClient(<ParticipantsList />);
     await screen.findByText('Ada');
     await user.type(screen.getByLabelText('Min BMI'), '20');
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
 
     await user.click(screen.getByRole('button', { name: 'Clear' }));
 

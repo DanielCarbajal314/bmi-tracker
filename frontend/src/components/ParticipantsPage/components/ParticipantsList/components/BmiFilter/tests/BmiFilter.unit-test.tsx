@@ -16,7 +16,7 @@ describe('BmiFilter', () => {
 
     await user.type(screen.getByLabelText('Min BMI'), '18.5');
     await user.type(screen.getByLabelText('Max BMI'), '24.9');
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
 
     expect(onApply).toHaveBeenCalledWith({ minBmi: 18.5, maxBmi: 24.9 });
   });
@@ -25,7 +25,7 @@ describe('BmiFilter', () => {
     const { user, onApply } = setup();
 
     await user.type(screen.getByLabelText('Min BMI'), '30');
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
 
     expect(onApply).toHaveBeenCalledWith({ minBmi: 30, maxBmi: undefined });
   });
@@ -35,7 +35,7 @@ describe('BmiFilter', () => {
 
     await user.type(screen.getByLabelText('Min BMI'), '30');
     await user.type(screen.getByLabelText('Max BMI'), '20');
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Minimum BMI cannot be greater than maximum BMI',
@@ -47,7 +47,7 @@ describe('BmiFilter', () => {
     const { user, onApply } = setup();
 
     await user.type(screen.getByLabelText('Min BMI'), '-5');
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Enter BMI values of 0 or more');
     expect(onApply).not.toHaveBeenCalled();

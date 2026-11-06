@@ -3,6 +3,7 @@ import { UnitSystemToggle } from '../UnitSystemToggle';
 import { useMeasurementFields } from './hooks/use-measurement-fields';
 import type { MeasurementFieldsProps } from './types/measurement-fields-props.types';
 
+// Age sits on the same row as weight and height, as in the design.
 export function MeasurementFields({
   form,
   unitSystem,
@@ -13,10 +14,10 @@ export function MeasurementFields({
   return (
     <div className="grid gap-4">
       <div className="grid gap-2">
-        <span className="text-sm leading-none font-medium">Unit system</span>
+        <span className="text-sm leading-none font-semibold">Unit system</span>
         <UnitSystemToggle value={unitSystem} onChange={onUnitSystemChange} />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <FormField
           form={form}
           name="weight"
@@ -35,6 +36,15 @@ export function MeasurementFields({
           inputMode="decimal"
           step="any"
           placeholder={height.placeholder}
+          numeric
+        />
+        <FormField
+          form={form}
+          name="age"
+          label="Age"
+          type="number"
+          inputMode="numeric"
+          step="1"
           numeric
         />
       </div>

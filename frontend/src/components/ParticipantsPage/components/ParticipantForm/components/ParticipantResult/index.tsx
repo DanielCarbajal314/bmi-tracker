@@ -16,7 +16,7 @@ export function ParticipantResult({ participant }: { participant: Participant })
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-muted-foreground">Weight</dt>
         <dd>
-          {participant.weightInKilos} kg · {participant.weightInLbs} lb
+          {participant.weightInKilos} kg · {participant.weightInLbs} lbs
         </dd>
         <dt className="text-muted-foreground">Height</dt>
         <dd>

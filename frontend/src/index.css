@@ -3,26 +3,58 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Light palette. Dark is the default theme: `initTheme()` puts `.dark` on <html>. */
 :root {
+  color-scheme: light;
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: #f9fafb;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #4d7fee;
+  --primary-foreground: #ffffff;
+  --secondary: #e5e7eb;
+  --secondary-foreground: #111827;
+  --success: #55b786;
+  --success-foreground: #ffffff;
+  --muted: #e5e7eb;
+  --muted-foreground: #6b7280;
+  --accent: #e5e7eb;
+  --accent-foreground: #111827;
+  --destructive: #dc2626;
+  --border: #d1d5db;
+  --input: #d1d5db;
+  --field: #f3f4f6;
+  --field-border: #d1d5db;
+  --ring: #4d7fee;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #121826;
+  --foreground: #f9fafb;
+  --card: #1c2333;
+  --card-foreground: #f9fafb;
+  --popover: #1c2333;
+  --popover-foreground: #f9fafb;
+  --primary: #4d7fee;
+  --primary-foreground: #ffffff;
+  --secondary: #394150;
+  --secondary-foreground: #f9fafb;
+  --success: #55b786;
+  --success-foreground: #ffffff;
+  --muted: #394150;
+  --muted-foreground: #9ca3af;
+  --accent: #4b5563;
+  --accent-foreground: #f9fafb;
+  --destructive: #f87171;
+  --border: #4b5563;
+  --input: #4b5563;
+  --field: #394150;
+  --field-border: #394150;
+  --ring: #6b95f2;
 }
 
 @theme inline {
@@ -36,6 +68,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -43,6 +77,8 @@
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-field: var(--field);
+  --color-field-border: var(--field-border);
   --color-ring: var(--ring);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

@@ -1,27 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { buildParticipant } from '../../../../../tests/participant.fixture';
-import { formatDate, formatHeight, formatWeight } from '../participant.formatter';
+import { formatBmi, formatDate, formatMeasure } from '../participant.formatter';
 
 describe('participant formatter', () => {
-  it('shows a metric participant in kg and m', () => {
-    const participant = buildParticipant({ unitPicked: 'metric' });
-
-    expect(formatWeight(participant)).toBe('70 kg');
-    expect(formatHeight(participant)).toBe('1.75 m');
+  it('shows weight and height with two decimals', () => {
+    expect(formatMeasure(85)).toBe('85.00');
+    expect(formatMeasure(154.3)).toBe('154.30');
   });
 
-  it('shows an imperial participant in lb and in', () => {
-    const participant = buildParticipant({
-      unitPicked: 'imperial',
-      weightInLbs: 154.3,
-      heightInInches: 69,
-    });
-
-    expect(formatWeight(participant)).toBe('154.3 lb');
-    expect(formatHeight(participant)).toBe('69 in');
+  it('rounds the BMI to one decimal', () => {
+    expect(formatBmi(20.49)).toBe('20.5');
+    expect(formatBmi(27.98)).toBe('28.0');
   });
 
-  it('formats the date in UTC', () => {
-    expect(formatDate('2026-11-05T21:00:00.000Z')).toBe('Nov 5, 2026');
+  it('formats date and time in the timezone of the test run (UTC, see test setup)', () => {
+    expect(formatDate('2026-11-05T21:00:00.000Z')).toBe('11/5/2026, 9:00:00 PM');
   });
 });

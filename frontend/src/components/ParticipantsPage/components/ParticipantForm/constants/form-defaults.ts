@@ -5,5 +5,5 @@ export const FORM_DEFAULTS: Partial<CreateParticipantInput> = {
   lastName: '',
   email: '',
   phone: '',
-  unitPicked: 'metric',
+  unitPicked: 'imperial',
 };

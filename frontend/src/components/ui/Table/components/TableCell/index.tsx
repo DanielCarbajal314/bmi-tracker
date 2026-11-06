@@ -5,7 +5,7 @@ export function TableCell({ className, ...props }: ComponentProps<'td'>) {
   return (
     <td
       data-slot="table-cell"
-      className={cn('p-2 align-middle whitespace-nowrap', className)}
+      className={cn('border border-border px-3 py-3.5 align-middle', className)}
       {...props}
     />
   );
