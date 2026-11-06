@@ -7,7 +7,7 @@ export function FormField({ form, name, label, numeric = false, ...inputProps }:
   const { error, errorId, registration } = useFormField(form, name, numeric);
 
   return (
-    <div className="grid gap-2">
+    <div className="grid content-start gap-1.5">
       <Label htmlFor={name}>{label}</Label>
       <Input
         id={name}

@@ -24,7 +24,7 @@ describe('ParticipantsPage', () => {
     expect(await screen.findByText('No participants found.')).toBeInTheDocument();
 
     await fillParticipantForm(user);
-    await user.click(screen.getByRole('button', { name: 'Calculate and save' }));
+    await user.click(screen.getByRole('button', { name: 'Save Participant' }));
 
     expect(await screen.findByRole('region', { name: 'Saved participant' })).toBeInTheDocument();
     expect(await screen.findByRole('table')).toBeInTheDocument();

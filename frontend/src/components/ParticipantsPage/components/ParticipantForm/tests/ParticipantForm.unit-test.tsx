@@ -7,7 +7,7 @@ import { fillParticipantForm } from '../../../tests/fill-participant-form';
 import { buildParticipant } from '../../../tests/participant.fixture';
 import { ParticipantForm } from '..';
 
-const submitButton = () => screen.getByRole('button', { name: 'Calculate and save' });
+const submitButton = () => screen.getByRole('button', { name: 'Save Participant' });
 
 describe('ParticipantForm', () => {
   it('asks for every required field and sends nothing', async () => {
@@ -24,41 +24,41 @@ describe('ParticipantForm', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('starts in the metric system and relabels both fields when the system changes', async () => {
+  it('starts in the imperial system and relabels both fields when the system changes', async () => {
     const user = userEvent.setup();
     renderWithQueryClient(<ParticipantForm />);
 
+    expect(screen.getByLabelText('Weight (lbs)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Height (in)')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: 'Metric' }));
+
     expect(screen.getByLabelText('Weight (kg)')).toBeInTheDocument();
     expect(screen.getByLabelText('Height (m)')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('radio', { name: 'Imperial' }));
-
-    expect(screen.getByLabelText('Weight (lb)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Height (in)')).toBeInTheDocument();
   });
 
   it('converts the typed weight and height when the system changes', async () => {
     const user = userEvent.setup();
     renderWithQueryClient(<ParticipantForm />);
-    await user.type(screen.getByLabelText('Weight (kg)'), '70');
-    await user.type(screen.getByLabelText('Height (m)'), '1.75');
+    await user.type(screen.getByLabelText('Weight (lbs)'), '154.32');
+    await user.type(screen.getByLabelText('Height (in)'), '68.9');
 
-    await user.click(screen.getByRole('radio', { name: 'Imperial' }));
+    await user.click(screen.getByRole('radio', { name: 'Metric' }));
 
-    expect(screen.getByLabelText('Weight (lb)')).toHaveValue(154.32);
-    expect(screen.getByLabelText('Height (in)')).toHaveValue(68.9);
+    expect(screen.getByLabelText('Weight (kg)')).toHaveValue(70);
+    expect(screen.getByLabelText('Height (m)')).toHaveValue(1.75);
   });
 
   it('names the allowed range for the chosen system', async () => {
     const user = userEvent.setup();
     renderWithQueryClient(<ParticipantForm />);
     await fillParticipantForm(user);
-    await user.clear(screen.getByLabelText('Weight (kg)'));
-    await user.type(screen.getByLabelText('Weight (kg)'), '5000');
+    await user.clear(screen.getByLabelText('Weight (lbs)'));
+    await user.type(screen.getByLabelText('Weight (lbs)'), '5000');
 
     await user.click(submitButton());
 
-    expect(await screen.findByText('Must be between 1 and 700 kg')).toBeInTheDocument();
+    expect(await screen.findByText('Must be between 2 and 1500 lbs')).toBeInTheDocument();
   });
 
   it('sends the participant, shows the calculated BMI and clears the form', async () => {
@@ -81,32 +81,32 @@ describe('ParticipantForm', () => {
       lastName: 'Lovelace',
       email: 'ada@example.com',
       phone: '+1 555 123 4567',
-      unitPicked: 'metric',
-      weight: 70,
-      height: 1.75,
+      unitPicked: 'imperial',
+      weight: 154.3,
+      height: 69,
       age: 30,
     });
-    expect(screen.getByLabelText('First name')).toHaveValue('');
-    expect(screen.getByLabelText('Weight (kg)')).toHaveValue(null);
+    expect(screen.getByLabelText('First Name')).toHaveValue('');
+    expect(screen.getByLabelText('Weight (lbs)')).toHaveValue(null);
   });
 
   it('keeps the chosen unit system after saving', async () => {
     const user = userEvent.setup();
-    stubFetch(() => ({ status: 201, body: buildParticipant({ unitPicked: 'imperial' }) }));
+    stubFetch(() => ({ status: 201, body: buildParticipant({ unitPicked: 'metric' }) }));
     renderWithQueryClient(<ParticipantForm />);
-    await user.click(screen.getByRole('radio', { name: 'Imperial' }));
-    await user.type(screen.getByLabelText('First name'), 'Ada');
-    await user.type(screen.getByLabelText('Last name'), 'Lovelace');
+    await user.click(screen.getByRole('radio', { name: 'Metric' }));
+    await user.type(screen.getByLabelText('First Name'), 'Ada');
+    await user.type(screen.getByLabelText('Last Name'), 'Lovelace');
     await user.type(screen.getByLabelText('Email'), 'ada@example.com');
     await user.type(screen.getByLabelText('Phone'), '5551234567');
     await user.type(screen.getByLabelText('Age'), '30');
-    await user.type(screen.getByLabelText('Weight (lb)'), '154.3');
-    await user.type(screen.getByLabelText('Height (in)'), '69');
+    await user.type(screen.getByLabelText('Weight (kg)'), '70');
+    await user.type(screen.getByLabelText('Height (m)'), '1.75');
 
     await user.click(submitButton());
 
     await screen.findByRole('region', { name: 'Saved participant' });
-    expect(screen.getByLabelText('Weight (lb)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Weight (kg)')).toBeInTheDocument();
   });
 
   it('shows no result when the server rejects the participant', async () => {
@@ -117,8 +117,8 @@ describe('ParticipantForm', () => {
 
     await user.click(submitButton());
 
-    await screen.findByRole('button', { name: 'Calculate and save' });
+    await screen.findByRole('button', { name: 'Save Participant' });
     expect(screen.queryByRole('region', { name: 'Saved participant' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('First name')).toHaveValue('Ada');
+    expect(screen.getByLabelText('First Name')).toHaveValue('Ada');
   });
 });
