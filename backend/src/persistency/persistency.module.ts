@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { buildDataSourceOptions } from '#config/database/database.options';
 import type { Env } from '#config/env/env.schema';
-import { DatabaseProbe } from './probes/database/database.probe';
-import { DatabaseProbeAdapter } from './probes/database/database.probe.adapter';
+import { DatabaseCheck } from './checks/database/database.check';
+import { DatabaseCheckAdapter } from './checks/database/database.check.adapter';
 import { ParticipantRepository } from './repositories/participant/participant.repository';
 import { ParticipantRepositoryAdapter } from './repositories/participant/participant.repository.adapter';
 import { AppUnitOfWork } from './transactions/app/app.unit-of-work';
@@ -29,10 +29,10 @@ import { TransactionContext } from './transactions/transaction-context';
   ],
   providers: [
     TransactionContext,
-    { provide: DatabaseProbe, useClass: DatabaseProbeAdapter },
+    { provide: DatabaseCheck, useClass: DatabaseCheckAdapter },
     { provide: ParticipantRepository, useClass: ParticipantRepositoryAdapter },
     { provide: AppUnitOfWork, useClass: AppUnitOfWorkAdapter },
   ],
-  exports: [DatabaseProbe, ParticipantRepository, AppUnitOfWork],
+  exports: [DatabaseCheck, ParticipantRepository, AppUnitOfWork],
 })
 export class PersistencyModule {}

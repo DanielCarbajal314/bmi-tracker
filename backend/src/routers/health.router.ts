@@ -1,7 +1,7 @@
 import { Controller, Get, Inject, ServiceUnavailableException } from '@nestjs/common';
 import { ApiServiceUnavailableResponse, ApiTags } from '@nestjs/swagger';
 import { createZodDto, ZodResponse } from 'nestjs-zod';
-import { DatabaseProbe } from '#persistency/probes/database/database.probe';
+import { DatabaseCheck } from '#persistency/checks/database/database.check';
 import { type HealthContract, HealthSchema } from '#use-cases/health/health.contract';
 
 class HealthResponse extends createZodDto(HealthSchema) {}
@@ -11,7 +11,7 @@ class HealthResponse extends createZodDto(HealthSchema) {}
 @ApiTags('health')
 @Controller('health')
 export class HealthRouter {
-  constructor(@Inject(DatabaseProbe) private readonly database: DatabaseProbe) {}
+  constructor(@Inject(DatabaseCheck) private readonly database: DatabaseCheck) {}
 
   @Get()
   @ZodResponse({ status: 200, description: 'The database answers', type: HealthResponse })

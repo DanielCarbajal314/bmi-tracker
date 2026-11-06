@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { ServiceUnavailableException } from '@nestjs/common';
-import { DatabaseProbe } from '#persistency/probes/database/database.probe';
+import { DatabaseCheck } from '#persistency/checks/database/database.check';
 import { HealthRouter } from '../health.router';
 
 // A database that cannot be reached: the one status the integration suite cannot provoke.
-class UnreachableDatabaseProbe extends DatabaseProbe {
+class UnreachableDatabaseCheck extends DatabaseCheck {
   ping(): Promise<void> {
     return Promise.reject(new Error('connection refused'));
   }
@@ -12,7 +12,7 @@ class UnreachableDatabaseProbe extends DatabaseProbe {
 
 describe('HealthRouter', () => {
   test('answers 503 when the database does not respond', async () => {
-    const router = new HealthRouter(new UnreachableDatabaseProbe());
+    const router = new HealthRouter(new UnreachableDatabaseCheck());
 
     const error = await router.check().catch((cause: unknown) => cause);
 

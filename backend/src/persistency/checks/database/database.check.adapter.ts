@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { DatabaseProbe } from './database.probe';
+import { DatabaseProbe } from './database.check';
 
 @Injectable()
 export class DatabaseProbeAdapter extends DatabaseProbe {
