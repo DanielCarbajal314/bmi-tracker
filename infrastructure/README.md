@@ -69,6 +69,16 @@ docker compose run --rm aws ecs describe-task-definition --task-definition bmi-t
 
 Migrations run while the previous tasks still serve traffic, so each one has to work with the old code too: add a column before the code uses it, drop it in a later release.
 
+## Testing the pipeline
+
+Use a pull request with a small change, so CI and CD run the way they will for real:
+
+1. Push a branch and open a pull request against `main`. Only the checks run (`backend`, `frontend`, `infra`): the `deploy` job is skipped for a pull request, so nothing reaches AWS.
+2. Merge it once the checks are green. The push to `main` runs the checks again and then calls `deploy.yml`.
+3. Watch the `deploy` job in Actions. When it ends green, both addresses answer: `GET <VITE_API_BASE_URL>/health` returns `{"status":"ok"}` and the frontend URL (`make infra-output`) shows the app.
+
+If the `Configure AWS credentials (OIDC)` step fails, the trust policy of the deploy role does not match the repository or the branch. CloudTrail records the token subject of the refused attempts (`AssumeRoleWithWebIdentity` events, `userIdentity.userName`).
+
 ## Rolling back
 
 Revert the commit on `main`: the push deploys the previous code. Migrations are not reverted: undo one with a new migration.
